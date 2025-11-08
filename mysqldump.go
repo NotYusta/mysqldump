@@ -97,7 +97,16 @@ func Dump(db *sql.DB, dbName string, opts ...DumpOption) error {
 	_, _ = buf.WriteString("-- Start Time: " + start.Format("2006-01-02 15:04:05") + "\n")
 	_, _ = buf.WriteString("-- Database Name: " + dbName + "\n")
 	_, _ = buf.WriteString("-- ----------------------------\n")
-	_, _ = buf.WriteString("SET FOREIGN_KEY_CHECKS=0;\n\n")
+
+	// Session / export settings
+	_, _ = buf.WriteString("/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;\n")
+	_, _ = buf.WriteString("/*!40101 SET NAMES utf8 */;\n")
+	_, _ = buf.WriteString("/*!50503 SET NAMES utf8mb4 */;\n")
+	_, _ = buf.WriteString("/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;\n")
+	_, _ = buf.WriteString("/*!40103 SET TIME_ZONE='+00:00' */;\n")
+	_, _ = buf.WriteString("/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;\n")
+	_, _ = buf.WriteString("/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;\n")
+	_, _ = buf.WriteString("/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;\n")
 
 	_, err = db.Exec(fmt.Sprintf("USE `%s`", dbName))
 	if err != nil {
