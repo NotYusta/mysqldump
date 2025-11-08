@@ -233,6 +233,10 @@ func writeTableData(db *sql.DB, table string, buf *bufio.Writer) (uint64, error)
 	columnNames := strings.Join(quotedColumns, ",")
 
 	if totalRow > 0 {
+		const batchSize = 1024
+		var batch []string
+		count := 0
+
 		for rows.Next() {
 			data := make([]*sql.NullString, len(columns))
 			ptrs := make([]interface{}, len(columns))
@@ -240,7 +244,6 @@ func writeTableData(db *sql.DB, table string, buf *bufio.Writer) (uint64, error)
 				ptrs[i] = &data[i]
 			}
 
-			// Read data
 			if err := rows.Scan(ptrs...); err != nil {
 				return totalRow, err
 			}
@@ -255,8 +258,21 @@ func writeTableData(db *sql.DB, table string, buf *bufio.Writer) (uint64, error)
 				}
 			}
 
-			buf.WriteString(fmt.Sprintf("INSERT INTO `%s` (%s) VALUES %s;\n", table, columnNames, "("+strings.Join(dataStrings, ",")+")"))
+			batch = append(batch, "("+strings.Join(dataStrings, ",")+")")
+			count++
+
+			// Flush batch when full
+			if count%batchSize == 0 {
+				buf.WriteString(fmt.Sprintf("INSERT INTO `%s` (%s) VALUES %s;\n", table, columnNames, strings.Join(batch, ",")))
+				batch = batch[:0] // clear batch
+			}
 		}
+
+		// Flush remaining rows
+		if len(batch) > 0 {
+			buf.WriteString(fmt.Sprintf("INSERT INTO `%s` (%s) VALUES %s;\n", table, columnNames, strings.Join(batch, ",")))
+		}
+
 	}
 
 	_, _ = buf.WriteString("\n")
