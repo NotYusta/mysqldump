@@ -219,8 +219,7 @@ func writeTableData(db *sql.DB, table string, buf *bufio.Writer) (uint64, error)
 	}
 	defer rows.Close()
 
-	var columns []string
-	columns, err = rows.Columns()
+	columns, err := rows.Columns()
 	if err != nil {
 		return totalRow, err
 	}
@@ -229,7 +228,6 @@ func writeTableData(db *sql.DB, table string, buf *bufio.Writer) (uint64, error)
 	for i, col := range columns {
 		quotedColumns[i] = "`" + col + "`"
 	}
-
 	columnNames := strings.Join(quotedColumns, ",")
 
 	if totalRow > 0 {
@@ -251,24 +249,27 @@ func writeTableData(db *sql.DB, table string, buf *bufio.Writer) (uint64, error)
 			dataStrings := make([]string, len(columns))
 			for key, value := range data {
 				if value != nil && value.Valid {
-					escaped := strings.ReplaceAll(value.String, "'", "''")
+					escaped := strings.ReplaceAll(value.String, "\\", "\\\\")
+					escaped = strings.ReplaceAll(escaped, "'", "''")
 					dataStrings[key] = "'" + escaped + "'"
 				} else {
 					dataStrings[key] = "NULL"
 				}
 			}
 
+			if len(dataStrings) != len(columns) {
+				return totalRow, fmt.Errorf("row has mismatched column count")
+			}
+
 			batch = append(batch, "("+strings.Join(dataStrings, ",")+")")
 			count++
 
-			// Flush batch when full
 			if count%batchSize == 0 {
 				buf.WriteString(fmt.Sprintf("INSERT INTO `%s` (%s) VALUES %s;\n", table, columnNames, strings.Join(batch, ",")))
-				batch = batch[:0] // clear batch
+				batch = batch[:0]
 			}
 		}
 
-		// Flush remaining rows
 		if len(batch) > 0 {
 			buf.WriteString(fmt.Sprintf("INSERT INTO `%s` (%s) VALUES %s;\n", table, columnNames, strings.Join(batch, ",")))
 		}
