@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/NotYusta/mysqldump"
+	"github.com/notyusta/mysqldump"
 )
 
 func main() {
